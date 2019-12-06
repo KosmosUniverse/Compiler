@@ -8,26 +8,26 @@ options {
   IGNORE_CASE = true;
 }
 
-PARSER_BEGIN(LSAnalizer)
+PARSER_BEGIN(CodeGenerator)
 
-public class LSAnalizer {
+public class CodeGenerator {
   public static void main(String args[]) throws ParseException {
-    LSAnalizer tokens;
+    CodeGenerator tokens;
     if (args.length == 0) {
       System.out.println("Reading from standard input ...");
-      tokens = new LSAnalizer(System.in);
+      tokens = new CodeGenerator(System.in);
     } else if (args.length == 1) {
       System.out.println("Reading from file " + args[0] + " ...");
       try {
-        tokens = new LSAnalizer(new java.io.FileInputStream(args[0]));
+        tokens = new CodeGenerator(new java.io.FileInputStream(args[0]));
       } catch (java.io.FileNotFoundException e) {
         System.out.println("File " + args[0] + " not found.");
         return ;
       }
     } else {
       System.out.println("Usage:");
-      System.out.println("	- java LSAnalizer < inputFile");
-      System.out.println("	- java LSAnalizer inputFile");
+      System.out.println("	- java CodeGenerator < inputFile");
+      System.out.println("	- java CodeGenerator inputFile");
       return ;
     }
     try {
@@ -39,7 +39,7 @@ public class LSAnalizer {
   }
 }
 
-PARSER_END(LSAnalizer)
+PARSER_END(CodeGenerator)
 
 SKIP: {
   " "
@@ -106,7 +106,7 @@ void start() : {}
 
 void decl_list() : {}
 {
-  (decl() [<SEMICOLON>decl_list()])
+  (decl()<SEMICOLON> [decl_list()])
 }
 
 void decl() : {}
@@ -161,15 +161,15 @@ void statement_block() : {}
 {
   (<IDENTIFIER>statement_elem())
   | (<LBRACE>statement_block()<RBRACE>)
-  | (<IF>condition()<LBRACE>statement_block()<RBRACE><ELSE><LBRACE>statement_block()<RBRACE>)
-  | (<WHILE>condition()<LBRACE>statement_block()<RBRACE>)
+  | (<IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>)
+  | (<WHILE>condition()<LBRACE>[statement_block()]<RBRACE>)
   | (<SQIP><SEMICOLON>)
 }
 
 void statement_elem() : {}
 {
   (<ASSIGN>expression()<SEMICOLON>)
-  | (<LPARENT>arg_list()<RPARENT><SEMICOLON>)
+  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>)
 }
 
 void expression() : {}
@@ -194,7 +194,7 @@ void fragment() : {}
 
 void is_func() : {}
 {
-  (<LPARENT>arg_list()<RPARENT>)
+  (<LPARENT>[arg_list()]<RPARENT>)
 }
 
 void calcul() : {}
