@@ -1,0 +1,256 @@
+/*
+ * Empty for now
+ */
+
+
+options {
+  LOOKAHEAD = 1;
+  IGNORE_CASE = true;
+}
+
+PARSER_BEGIN(LSAnalizer)
+
+public class LSAnalizer {
+  public static void main(String args[]) throws ParseException {
+    LSAnalizer tokens;
+    if (args.length == 0) {
+      System.out.println("Reading from standard input ...");
+      tokens = new LSAnalizer(System.in);
+    } else if (args.length == 1) {
+      System.out.println("Reading from file " + args[0] + " ...");
+      try {
+        tokens = new LSAnalizer(new java.io.FileInputStream(args[0]));
+      } catch (java.io.FileNotFoundException e) {
+        System.out.println("File " + args[0] + " not found.");
+        return ;
+      }
+    } else {
+      System.out.println("Usage:");
+      System.out.println("	- java LSAnalizer < inputFile");
+      System.out.println("	- java LSAnalizer inputFile");
+      return ;
+    }
+    try {
+      tokens.start();
+      System.out.println("Java program parsed successfully.");
+    } catch (ParseException e) {
+      System.out.println("Encountered error during parse.");
+    }
+  }
+}
+
+PARSER_END(LSAnalizer)
+
+SKIP: {
+  " "
+  | "\t"
+  | "\n"
+  | "\r"
+  | "\f"
+}
+
+SPECIAL_TOKEN : /* COMMENTS */
+{
+  <SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+| <FORMAL_COMMENT: "/**" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+| <MULTI_LINE_COMMENT: "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+}
+
+TOKEN: { //Reseved words
+  <VAR: "var">
+  | <CONST: "const">
+  | <INTEGER: "integer">
+  | <BOOLEAN: "boolean">
+  | <VOID: "void">
+  | <IF: "if">
+  | <MAIN: "main">
+  | <ELSE: "else">
+  | <WHILE: "while">
+  | <SQIP: "skip">
+  | <RETURN: "return">
+  | <TRUE: "true">
+  | <FALSE: "false">
+}
+
+TOKEN: { //Symbols
+  <LBRACE: "{">
+  | <RBRACE: "}">
+  | <LPARENT: "(">
+  | <RPARENT: ")">
+  | <COMA: ",">
+  | <SEMICOLON: ";">
+  | <PLUS: "+">
+  | <MINUS: "-">
+  | <TILDE: "~">
+  | <ASSIGN: "=">
+  | <EQUAL: "==">
+  | <NEQUAL: "!=">
+  | <GREATEST: ">">
+  | <GEQUAL: ">=">
+  | <LOWEST: "<">
+  | <LEQUAL: "<=">
+  | <OR: "||">
+  | <AND: "&&">
+  | <TPOINT:":">
+}
+
+TOKEN: { // Usable
+  <NUMBER: ["1"-"9"] (["0"-"9"])* | "-"["1"-"9"] (["0"-"9"])*>
+  | <IDENTIFIER: ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
+}
+
+void start() : {}
+{
+  ([decl_list()] [function_list()] main()<EOF>)
+}
+
+void decl_list() : {}
+{
+  (decl() [<SEMICOLON>decl_list()])
+}
+
+void decl() : {}
+{
+  var_decl()
+  | const_decl()
+}
+
+void var_decl() : {}
+{
+  (<VAR><IDENTIFIER><TPOINT>type())
+}
+
+void const_decl() : {}
+{
+  (<CONST><IDENTIFIER><TPOINT>type()<ASSIGN>expression())
+}
+
+void function_list() : {}
+{
+  (function()[function_list()])
+  | (function_void() [function_list()])
+}
+
+void function() : {}
+{
+  (type()<IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><RBRACE>)
+}
+
+void function_void() : {}
+{
+  (<VOID><IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><RBRACE>)
+}
+
+void type() : {}
+{
+  <INTEGER>
+  | <BOOLEAN>
+}
+
+void parameter_list() : {}
+{
+  (<IDENTIFIER><TPOINT>type()[<COMA>parameter_list()])
+}
+
+void main() : {}
+{
+  (<MAIN><LBRACE>[decl_list()][statement_block()]<RBRACE>)
+}
+
+void statement_block() : {}
+{
+  (<IDENTIFIER>statement_elem())
+  | (<LBRACE>statement_block()<RBRACE>)
+  | (<IF>condition()<LBRACE>statement_block()<RBRACE><ELSE><LBRACE>statement_block()<RBRACE>)
+  | (<WHILE>condition()<LBRACE>statement_block()<RBRACE>)
+  | (<SQIP><SEMICOLON>)
+}
+
+void statement_elem() : {}
+{
+  (<ASSIGN>expression()<SEMICOLON>)
+  | (<LPARENT>arg_list()<RPARENT><SEMICOLON>)
+}
+
+void expression() : {}
+{
+  (expression_one()[expression_two()])
+}
+
+void expression_one() : {}
+{
+  (fragment() [calcul()])
+}
+
+void fragment() : {}
+{
+  (<IDENTIFIER>[is_func()])
+  | (<MINUS><IDENTIFIER>)
+  | <NUMBER>
+  | <TRUE>
+  | <FALSE>
+  | (<LPARENT>condition()<RPARENT>)
+}
+
+void is_func() : {}
+{
+  (<LPARENT>arg_list()<RPARENT>)
+}
+
+void calcul() : {}
+{
+  (binary_op() expression_one())
+}
+
+void binary_op() : {}
+{
+  <PLUS>
+  | <MINUS>
+}
+
+void expression_two() : {}
+{
+  (comp_op() expression())
+}
+
+void comp_op() : {}
+{
+  <EQUAL>
+  | <NEQUAL>
+  | <GEQUAL>
+  | <LEQUAL>
+  | <GREATEST>
+  | <LOWEST>
+}
+
+void condition() : {}
+{
+  (condition_one() [condition_two()])
+}
+
+void condition_one() : {}
+{
+  (<TILDE>condition())
+  | expression()
+}
+
+void condition_two() : {}
+{
+  (op() condition())
+}
+
+void op() : {}
+{
+  <OR>
+  | <AND>
+}
+
+void arg_list() : {}
+{
+  (<IDENTIFIER>[arg_elem()])
+}
+
+void arg_elem() : {}
+{
+  (<COMA>arg_list())
+}

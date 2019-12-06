@@ -1,0 +1,271 @@
+/*
+ *  TOKENSIZER and PARSER in JavaCC
+ *  For DCU Computin module: CA4003
+ *  Author: Thomas Ducret
+ */
+
+
+options {
+  LOOKAHEAD = 1;
+  IGNORE_CASE = true;
+}
+
+PARSER_BEGIN(LSAnalizer)
+
+public class LSAnalizer {
+  public static void main(String args[]) throws ParseException {
+    LSAnalizer tokens;
+    if (args.length == 0) {
+      System.out.println("Reading from standard input ...");
+      tokens = new LSAnalizer(System.in);
+    } else if (args.length == 1) {
+      System.out.println("Reading from file " + args[0] + " ...");
+      try {
+        tokens = new LSAnalizer(new java.io.FileInputStream(args[0]));
+      } catch (java.io.FileNotFoundException e) {
+        System.out.println("File " + args[0] + " not found.");
+        return ;
+      }
+    } else {
+      System.out.println("Usage:");
+      System.out.println("	- java LSAnalizer < inputFile");
+      System.out.println("	- java LSAnalizer inputFile");
+      return ;
+    }
+    try {
+      tokens.start();
+      System.out.println("Java program parsed successfully.");
+    } catch (ParseException e) {
+      System.out.println("Encountered error during parse.");
+      System.out.println(e);
+    }
+  }
+}
+
+PARSER_END(LSAnalizer)
+
+TOKEN_MGR_DECLS : {
+  static int commentNesting = 0;
+}
+
+SKIP: {
+  " "
+  | "\t"
+  | "\n"
+  | "\r"
+  | "\f"
+}
+
+SKIP : /* COMMENTS */
+{
+  "/*" {commentNesting++;} : IN_COMMENT
+  | <SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
+}
+
+<IN_COMMENT> SKIP : {
+  "/*" {commentNesting++;}
+  | "*/" {commentNesting--;
+          if (commentNesting == 0)
+            SwitchTo(DEFAULT);}
+  | <~[]>
+}
+
+TOKEN: { //Reseved words
+  <VAR: "var">
+  | <CONST: "const">
+  | <INTEGER: "integer">
+  | <BOOLEAN: "boolean">
+  | <VOID: "void">
+  | <IF: "if">
+  | <MAIN: "main">
+  | <ELSE: "else">
+  | <WHILE: "while">
+  | <SQIP: "skip">
+  | <RETURN: "return">
+  | <TRUE: "true">
+  | <FALSE: "false">
+}
+
+TOKEN: { //Symbols
+  <LBRACE: "{">
+  | <RBRACE: "}">
+  | <LPARENT: "(">
+  | <RPARENT: ")">
+  | <COMA: ",">
+  | <SEMICOLON: ";">
+  | <PLUS: "+">
+  | <MINUS: "-">
+  | <TILDE: "~">
+  | <ASSIGN: "=">
+  | <EQUAL: "==">
+  | <NEQUAL: "!=">
+  | <GREATEST: ">">
+  | <GEQUAL: ">=">
+  | <LOWEST: "<">
+  | <LEQUAL: "<=">
+  | <OR: "||">
+  | <AND: "&&">
+  | <TPOINT:":">
+}
+
+TOKEN: { // Usable
+  <NUMBER: "0" | ["1"-"9"] (["0"-"9"])* | "-"["1"-"9"] (["0"-"9"])*>
+  | <IDENTIFIER: ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
+}
+
+void start() : {}
+{
+  ((decl_list())* [function_list()] main()<EOF>){System.out.println("Program");}
+}
+
+void decl_list() : {}
+{
+  (decl()<SEMICOLON>){System.out.println("decl_list");}
+}
+
+void decl() : {}
+{
+  var_decl(){System.out.println("decl -> var_decl");}
+  | const_decl(){System.out.println("decl -> const_decl");}
+}
+
+void var_decl() : {}
+{
+  (<VAR><IDENTIFIER><TPOINT>type()){System.out.println("var_decl");}
+}
+
+void const_decl() : {}
+{
+  (<CONST><IDENTIFIER><TPOINT>type()<ASSIGN>expression()){System.out.println("const_decl");}
+}
+
+void function_list() : {}
+{
+  (function()[function_list()]){System.out.println("function_list -> function");}
+  | (function_void()[function_list()]){System.out.println("function_list -> function_void");}
+}
+
+void function() : {}
+{
+  (type()<IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>(decl_list())*(statement_block())*<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>){System.out.println("function");}
+}
+
+void function_void() : {Token t;}
+{
+  (<VOID>t=<IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>(decl_list())*(statement_block())*<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>){System.out.println("function_void -> identifier = " + t.image);}
+}
+
+void type() : {}
+{
+  <INTEGER>{System.out.println("Type -> integer");}
+  | <BOOLEAN>{System.out.println("Type -> boolean");}
+}
+
+void parameter_list() : {}
+{
+  (<IDENTIFIER><TPOINT>type()[<COMA>parameter_list()]){System.out.println("parameter_list");}
+}
+
+void main() : {}
+{
+  (<MAIN><LBRACE>(decl_list())*(statement_block())*<RBRACE>){System.out.println("main");}
+}
+
+void statement_block() : {Token t;}
+{
+  (t=<IDENTIFIER>statement_elem()){System.out.println("statement_block -> identifier = " + t.image);}
+  | (<LBRACE>statement_block()<RBRACE>){System.out.println("statement_block -> stm_blk");}
+  | (<IF>condition()<LBRACE>(statement_block())*<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>){System.out.println("statement_block -> if block");}
+  | (<WHILE>condition()<LBRACE>(statement_block())*<RBRACE>){System.out.println("statement_block -> while block");}
+  | (<SQIP><SEMICOLON>){System.out.println("statement_block -> skip");}
+}
+
+void statement_elem() : {}
+{
+  (<ASSIGN>expression()<SEMICOLON>){System.out.println("statement_elem -> assign");}
+  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>){System.out.println("statement_elem -> arg_list");}
+}
+
+void expression() : {}
+{
+  (expression_one()[expression_two()]){System.out.println("expression");}
+}
+
+void expression_one() : {}
+{
+  (fragment() [calcul()]){System.out.println("expression_one");}
+}
+
+void fragment() : {Token t;}
+{
+  {System.out.println("[FRAGMENT]");}
+  (t=<IDENTIFIER>[is_func()]){System.out.println("fragment -> identifier = " + t.image);}
+  | (<MINUS>t=<IDENTIFIER>){System.out.println("fragment -> minus = " + t.image);}
+  | t=<NUMBER>{System.out.println("fragment -> number = " + t.image);}
+  | <TRUE>{System.out.println("fragment -> True");}
+  | <FALSE>{System.out.println("fragment -> false");}
+  | (<LPARENT>condition()<RPARENT>){System.out.println("fragment -> (condition)");}
+  | (<TILDE><LPARENT>condition()<RPARENT>){System.out.println("fragment -> ~(condition)");}
+}
+
+void is_func() : {}
+{
+  (<LPARENT>[arg_list()]<RPARENT>){System.out.println("is_func");}
+}
+
+void calcul() : {}
+{
+  (binary_op() expression_one()){System.out.println("calcul");}
+}
+
+void binary_op() : {}
+{
+  <PLUS>{System.out.println("binary -> plus");}
+  | <MINUS>{System.out.println("binary -> minus");}
+}
+
+void expression_two() : {}
+{
+  (comp_op() expression()){System.out.println("expression_two");}
+}
+
+void comp_op() : {}
+{
+  <EQUAL>{System.out.println("comp -> equal");}
+  | <NEQUAL>{System.out.println("comp -> nequal");}
+  | <GEQUAL>{System.out.println("comp -> gequal");}
+  | <LEQUAL>{System.out.println("comp -> lequal");}
+  | <GREATEST>{System.out.println("comp -> greatest");}
+  | <LOWEST>{System.out.println("comp -> lowest");}
+}
+
+void condition() : {}
+{
+  (condition_one() [condition_two()]){System.out.println("condition");}
+}
+
+void condition_one() : {}
+{
+  expression(){System.out.println("condition_one");}
+}
+
+void condition_two() : {}
+{
+  (op() condition()){System.out.println("condition_two");}
+}
+
+void op() : {}
+{
+  <OR>{System.out.println("op -> or");}
+  | <AND>{System.out.println("op -> and");}
+}
+
+void arg_list() : {}
+{
+  (<IDENTIFIER>[arg_elem()]){System.out.println("arg_list");}
+}
+
+void arg_elem() : {}
+{
+  (<COMA>arg_list()){System.out.println("arg_elem");}
+}
