@@ -6,6 +6,8 @@
 options {
   LOOKAHEAD = 1;
   IGNORE_CASE = true;
+  MULTI = true;
+  VISITOR = true;
 }
 
 PARSER_BEGIN(CodeGenerator)
@@ -141,10 +143,10 @@ void function_void() : {}
   (<VOID><IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><RBRACE>)
 }
 
-void type() : {}
+void type() #void : {}
 {
-  <INTEGER>
-  | <BOOLEAN>
+  <INTEGER> #type_integer(1)
+  | <BOOLEAN> #type_boolean(1)
 }
 
 void parameter_list() : {}
@@ -157,19 +159,19 @@ void main() : {}
   (<MAIN><LBRACE>[decl_list()][statement_block()]<RBRACE>)
 }
 
-void statement_block() : {}
+void statement_block() #void : {}
 {
-  (<IDENTIFIER>statement_elem())
-  | (<LBRACE>statement_block()<RBRACE>)
-  | (<IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>)
-  | (<WHILE>condition()<LBRACE>[statement_block()]<RBRACE>)
-  | (<SQIP><SEMICOLON>)
+  (<IDENTIFIER>statement_elem()) #stmt_id(1)
+  | (<LBRACE>statement_block()<RBRACE>) #stmt_stmt(1)
+  | (<IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>) #stmt_if(1)
+  | (<WHILE>condition()<LBRACE>[statement_block()]<RBRACE>) #stmt_while(1)
+  | (<SQIP><SEMICOLON>) #stmt_skip(1)
 }
 
-void statement_elem() : {}
+void statement_elem() #void : {}
 {
-  (<ASSIGN>expression()<SEMICOLON>)
-  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>)
+  (<ASSIGN>expression()<SEMICOLON>) #selem_assign(1)
+  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>) #selem_func(1)
 }
 
 void expression() : {}
@@ -182,14 +184,14 @@ void expression_one() : {}
   (fragment() [calcul()])
 }
 
-void fragment() : {}
+void fragment() #void : {}
 {
-  (<IDENTIFIER>[is_func()])
-  | (<MINUS><IDENTIFIER>)
-  | <NUMBER>
-  | <TRUE>
-  | <FALSE>
-  | (<LPARENT>condition()<RPARENT>)
+  (<IDENTIFIER>[is_func()]) #frag_id(1)
+  | (<MINUS><IDENTIFIER>) #frag_minus(1)
+  | <NUMBER> #frag_number(1)
+  | <TRUE> #frag_true(1)
+  | <FALSE> #frag_false(1)
+  | (<LPARENT>condition()<RPARENT>) #frag_condition(1)
 }
 
 void is_func() : {}
@@ -202,10 +204,10 @@ void calcul() : {}
   (binary_op() expression_one())
 }
 
-void binary_op() : {}
+void binary_op() #void : {}
 {
-  <PLUS>
-  | <MINUS>
+  <PLUS> #bin_plus(1)
+  | <MINUS> #bin_minus(1)
 }
 
 void expression_two() : {}
@@ -213,14 +215,14 @@ void expression_two() : {}
   (comp_op() expression())
 }
 
-void comp_op() : {}
+void comp_op() #void : {}
 {
-  <EQUAL>
-  | <NEQUAL>
-  | <GEQUAL>
-  | <LEQUAL>
-  | <GREATEST>
-  | <LOWEST>
+  <EQUAL> #comp_equal(1)
+  | <NEQUAL> #comp_nequal(1)
+  | <GEQUAL> #comp_gequal(1)
+  | <LEQUAL> #comp_lequal(1)
+  | <GREATEST> #comp_great(1)
+  | <LOWEST> #comp_low(1)
 }
 
 void condition() : {}
@@ -228,10 +230,10 @@ void condition() : {}
   (condition_one() [condition_two()])
 }
 
-void condition_one() : {}
+void condition_one() #void : {}
 {
-  (<TILDE>condition())
-  | expression()
+  (<TILDE><LPARENT>condition()<RPARENT>) #cond_tilde(1)
+  | expression() #cond_expr(1)
 }
 
 void condition_two() : {}
@@ -239,10 +241,10 @@ void condition_two() : {}
   (op() condition())
 }
 
-void op() : {}
+void op() #void : {}
 {
-  <OR>
-  | <AND>
+  <OR> #op_or(1)
+  | <AND> #op_and(1)
 }
 
 void arg_list() : {}
