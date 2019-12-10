@@ -1,10 +1,3 @@
-/*
-    public Object visit(node, Object data) {
-
-        return (data);
-    }
-*/
-
 public class Print implements CodeGeneratorVisitor {
     public Object visit(SimpleNode node, Object data) {
         throw new RuntimeException("SimpleNode visit");
@@ -14,12 +7,14 @@ public class Print implements CodeGeneratorVisitor {
         System.out.println("Code Start");
         node.jjtGetChild(0).jjtAccept(this, data);
         System.out.println("Code End");
+        System.out .println(node.value);
         return (data);
     }
 
     public Object visit(ASTdecl_list node, Object data) {
-        System.out.println("Decl_list");
+        System.out.print("Decl_list");
         node.jjtGetChild(0).jjtAccept(this, data);
+        node.jjtGetChild(1).jjtAccept(this, data);
         return (data);
     }
 
@@ -291,14 +286,8 @@ public class Print implements CodeGeneratorVisitor {
     }
     // End Op
 
-    public Object visit(ASTarg_list node, Object data) {
+    public Object visit(ASTargs node, Object data) {
         System.out.println("Arg_list");
-        node.jjtGetChild(0).jjtAccept(this, data);
-        return (data);
-    }
-
-        public Object visit(ASTarg_elem node, Object data) {
-        System.out.println("Arg_elem");
         node.jjtGetChild(0).jjtAccept(this, data);
         return (data);
     }
