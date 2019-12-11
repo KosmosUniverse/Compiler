@@ -46,6 +46,11 @@ public class CodeGenerator {
 
 PARSER_END(CodeGenerator)
 
+TOKEN_MGR_DECLS :
+{
+  static int commentLevel = 0;
+}
+
 SKIP: {
   " "
   | "\t"
@@ -54,11 +59,17 @@ SKIP: {
   | "\f"
 }
 
-SPECIAL_TOKEN : /* COMMENTS */
+SKIP: /* COMMENTS */
 {
   <SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
-| <FORMAL_COMMENT: "/**" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
-| <MULTI_LINE_COMMENT: "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+| "/*" {commentLevel++;}: COMMENTS
+}
+
+<COMMENTS> SKIP:
+{
+  "/*" {commentLevel++;}
+  | "*/" {commentLevel--; if (commentLevel == 0) SwitchTo(DEFAULT);}
+  | <~[]>
 }
 
 TOKEN: { //Reseved words
@@ -106,12 +117,12 @@ TOKEN: { // Usable
 
 SimpleNode start() : {String res; String decl; String func; String main;}
 {
-  ({res = "";} [decl = decl_list() {res += decl;}] [func = function_list() {res += func;}] main = main()<EOF>) {res += main; jjtThis.value = res; return jjtThis;}
+  ({res = "";} [decl = decl_list() {res += decl;}] [func = function_list() {res += func;}] main = mymain()<EOF>) {res += main; jjtThis.value = res; return jjtThis;}
 }
 
-String decl_list() #void : {String decl2; String res;}
+String decl_list() : {String decl2; String res;}
 {
-  (res = decl()<SEMICOLON> [decl2 = decl_list() {res+= ";" + decl2;} #decl_list(2)]) {return res;}
+  (res = decl()<SEMICOLON> [decl2 = decl_list() {res+= ";" + decl2;}]) {return res;}
 }
 
 String decl() : {String s;}
@@ -157,7 +168,7 @@ String parameter_list() : {Token id; String type; String res; String param;}
   (id = <IDENTIFIER><TPOINT>type = type() {res = id.image + " " + type;} [<COMA>param = parameter_list() {res += ", " + param;}]) {return res;}
 }
 
-String main() : {String decl; String state; String res;}
+String mymain() : {String decl; String state; String res;}
 {
   ({res = "main\n{\n";} <MAIN><LBRACE>[decl = decl_list() {res += decl + "\n";}][state = statement_block() {res += state + "\n";}]<RBRACE>) {res += "}\n"; return res;}
 }
