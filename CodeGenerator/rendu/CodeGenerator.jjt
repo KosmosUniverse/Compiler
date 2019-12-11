@@ -6,6 +6,8 @@
 options {
   LOOKAHEAD = 1;
   IGNORE_CASE = true;
+  MULTI = true;
+  VISITOR = true;
 }
 
 PARSER_BEGIN(LSAnalizer)
@@ -41,6 +43,11 @@ public class LSAnalizer {
 
 PARSER_END(LSAnalizer)
 
+TOKEN_MGR_DECLS:
+{
+  static int comsLevel = 0;
+}
+
 SKIP: {
   " "
   | "\t"
@@ -49,11 +56,17 @@ SKIP: {
   | "\f"
 }
 
-SPECIAL_TOKEN : /* COMMENTS */
+SKIP : /* COMMENTS */
 {
   <SINGLE_LINE_COMMENT: "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n")>
-| <FORMAL_COMMENT: "/**" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
-| <MULTI_LINE_COMMENT: "/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+| "/*" {comsLevel++;}: COMS
+}
+
+<COMS> SKIP:
+{
+  "/*" {comsLevel++;}
+  | "*/" {comsLevel--; if (comsLevel == 0) SwitchTo(DEFAULT);}
+  | <~[]>
 }
 
 TOKEN: { //Reseved words
