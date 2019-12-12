@@ -39,7 +39,6 @@ public class CodeGenerator {
       root.jjtAccept(pv, null);
     } catch (ParseException e) {
       System.out.println("Encountered error during parse.");
-      e.printStackTrace();
     }
   }
 }
