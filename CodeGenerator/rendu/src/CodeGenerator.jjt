@@ -1,8 +1,3 @@
-/*
- * Empty for now
- */
-
-
 options {
   LOOKAHEAD = 1;
   IGNORE_CASE = true;
@@ -12,7 +7,12 @@ options {
 
 PARSER_BEGIN(CodeGenerator)
 
+import java.util.ArrayList;
+
 public class CodeGenerator {
+  public static STable st = new STable();
+  public static ArrayList<String> errors = new ArrayList<String>();
+
   public static void main(String args[]) throws ParseException {
     CodeGenerator tokens;
     if (args.length == 0) {
@@ -37,6 +37,11 @@ public class CodeGenerator {
       System.out.println("Java program parsed successfully.");
       PrintVisitor pv = new PrintVisitor();
       root.jjtAccept(pv, null);
+      System.out.println("STACK:");
+      st.printStack();
+      System.out.println("\nERRORS:");
+      for(int i = 0; i < errors.size(); i++)
+        System.out.println(errors.get(i));
     } catch (ParseException e) {
       System.out.println("Encountered error during parse.");
     }
@@ -53,7 +58,7 @@ TOKEN_MGR_DECLS:
 SKIP: {
   " "
   | "\t"
-  | "\n"
+  | "\n" 
   | "\r"
   | "\f"
 }
@@ -130,36 +135,36 @@ void decl() : {}
   | const_decl()
 }
 
-void var_decl() : {Token t;}
+void var_decl() : {Token t; String type;}
 {
-  (<VAR>t = <IDENTIFIER><TPOINT>type()) {jjtThis.value = t.image;}
+  (<VAR>t = <IDENTIFIER><TPOINT>type = type()) {jjtThis.value = t.image; st.addElem(t.image, type, false, false);}
 }
 
-void const_decl() : {Token t;}
+void const_decl() : {Token t; String type;}
 {
-  (<CONST>t = <IDENTIFIER><TPOINT>type()<ASSIGN>expression()) {jjtThis.value = t.image;}
+  (<CONST>t = <IDENTIFIER><TPOINT>type = type()<ASSIGN>expression()) {jjtThis.value = t.image; st.addElem(t.image, type, true, false);}
 }
 
 void function_list() : {}
 {
-  (function()[function_list()])
+  (function() [function_list()])
   | (function_void() [function_list()])
 }
 
-void function() : {Token t;}
+void function() : {Token t; String type;}
 {
-  (type()t = <IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image;}
+  (type = type()t = <IDENTIFIER> {st.addElem(t.image, type, false, true); st.addBreak();} <LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image; st.removeUntilBreak();}
 }
 
 void function_void() : {Token t;}
 {
-  (<VOID>t = <IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image;}
+  (<VOID>t = <IDENTIFIER> {st.addElem(t.image, "void", false, true); st.addBreak();} <LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image; st.removeUntilBreak();}
 }
 
-void type() : {Token t;}
+String type() : {Token t;}
 {
-  t = <INTEGER> {jjtThis.value = t.image;}
-  | t = <BOOLEAN> {jjtThis.value = t.image;}
+  t = <INTEGER> {jjtThis.value = t.image; return t.image;}
+  | t = <BOOLEAN> {jjtThis.value = t.image; return t.image;}
 }
 
 void parameter_list() : {Token t;}
@@ -169,22 +174,22 @@ void parameter_list() : {Token t;}
 
 void main() : {}
 {
-  (<MAIN><LBRACE>[decl_list()][statement_block()]<RBRACE>)
+  (<MAIN> {st.addElem("main", "void", false, true); st.addBreak();} <LBRACE>[decl_list()][statement_block()]<RBRACE>) {st.removeUntilBreak();}
 }
 
 void statement_block() : {Token t;}
 {
-  (t = <IDENTIFIER>statement_elem()[statement_block()]) {jjtThis.value = t.image;}
+  (t = <IDENTIFIER>statement_elem(t.image)[statement_block()]) {jjtThis.value = t.image;}
   | (<LBRACE>statement_block()<RBRACE>[statement_block()]){jjtThis.value = "{Statement_block}";}
   | (t = <IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>[statement_block()]){jjtThis.value = t.image;}
   | (t = <WHILE>condition()<LBRACE>[statement_block()]<RBRACE>[statement_block()]){jjtThis.value = t.image;}
   | (t = <SQIP><SEMICOLON>[statement_block()]){jjtThis.value = t.image;}
 }
 
-void statement_elem() #void : {}
+void statement_elem(String name) #void : {}
 {
   (<ASSIGN>expression()<SEMICOLON>) #assign(1)
-  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>) #funcarg(1)
+  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>) #funcarg(1) {st.checkElem(name, true, errors);}
 }
 
 void expression() : {}
