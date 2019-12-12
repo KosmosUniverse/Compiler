@@ -10,26 +10,26 @@ options {
   VISITOR = true;
 }
 
-PARSER_BEGIN(LSAnalizer)
+PARSER_BEGIN(CodeGenerator)
 
-public class LSAnalizer {
+public class CodeGenerator {
   public static void main(String args[]) throws ParseException {
-    LSAnalizer tokens;
+    CodeGenerator tokens;
     if (args.length == 0) {
       System.out.println("Reading from standard input ...");
-      tokens = new LSAnalizer(System.in);
+      tokens = new CodeGenerator(System.in);
     } else if (args.length == 1) {
       System.out.println("Reading from file " + args[0] + " ...");
       try {
-        tokens = new LSAnalizer(new java.io.FileInputStream(args[0]));
+        tokens = new CodeGenerator(new java.io.FileInputStream(args[0]));
       } catch (java.io.FileNotFoundException e) {
         System.out.println("File " + args[0] + " not found.");
         return ;
       }
     } else {
       System.out.println("Usage:");
-      System.out.println("	- java LSAnalizer < inputFile");
-      System.out.println("	- java LSAnalizer inputFile");
+      System.out.println("	- java CodeGenerator < inputFile");
+      System.out.println("	- java CodeGenerator inputFile");
       return ;
     }
     try {
@@ -37,11 +37,12 @@ public class LSAnalizer {
       System.out.println("Java program parsed successfully.");
     } catch (ParseException e) {
       System.out.println("Encountered error during parse.");
+      e.printStackTrace();
     }
   }
 }
 
-PARSER_END(LSAnalizer)
+PARSER_END(CodeGenerator)
 
 TOKEN_MGR_DECLS:
 {
@@ -108,7 +109,7 @@ TOKEN: { //Symbols
 }
 
 TOKEN: { // Usable
-  <NUMBER: ["1"-"9"] (["0"-"9"])* | "-"["1"-"9"] (["0"-"9"])*>
+  <NUMBER: "0" | ["1"-"9"] (["0"-"9"])* | "-"["1"-"9"] (["0"-"9"])*>
   | <IDENTIFIER: ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
 }
 
@@ -119,7 +120,7 @@ void start() : {}
 
 void decl_list() : {}
 {
-  (decl() [<SEMICOLON>decl_list()])
+  (decl()<SEMICOLON> [decl_list()])
 }
 
 void decl() : {}
@@ -146,12 +147,12 @@ void function_list() : {}
 
 void function() : {}
 {
-  (type()<IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><RBRACE>)
+  (type()<IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>)
 }
 
 void function_void() : {}
 {
-  (<VOID><IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><RBRACE>)
+  (<VOID><IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>)
 }
 
 void type() : {}
@@ -172,22 +173,22 @@ void main() : {}
 
 void statement_block() : {}
 {
-  (<IDENTIFIER>statement_elem())
-  | (<LBRACE>statement_block()<RBRACE>)
-  | (<IF>condition()<LBRACE>statement_block()<RBRACE><ELSE><LBRACE>statement_block()<RBRACE>)
-  | (<WHILE>condition()<LBRACE>statement_block()<RBRACE>)
-  | (<SQIP><SEMICOLON>)
+  (<IDENTIFIER>statement_elem()[statement_block()])
+  | (<LBRACE>statement_block()<RBRACE>[statement_block()])
+  | (<IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>[statement_block()])
+  | (<WHILE>condition()<LBRACE>[statement_block()]<RBRACE>[statement_block()])
+  | (<SQIP><SEMICOLON>[statement_block()])
 }
 
 void statement_elem() : {}
 {
   (<ASSIGN>expression()<SEMICOLON>)
-  | (<LPARENT>arg_list()<RPARENT><SEMICOLON>)
+  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>)
 }
 
 void expression() : {}
 {
-  (expression_one()[expression_two()])
+  (expression_one() [expression_two()])
 }
 
 void expression_one() : {}
@@ -207,7 +208,7 @@ void fragment() : {}
 
 void is_func() : {}
 {
-  (<LPARENT>arg_list()<RPARENT>)
+  (<LPARENT>[arg_list()]<RPARENT>)
 }
 
 void calcul() : {}
@@ -243,7 +244,7 @@ void condition() : {}
 
 void condition_one() : {}
 {
-  (<TILDE>condition())
+  (<TILDE><LPARENT>condition()<RPARENT>)
   | expression()
 }
 
