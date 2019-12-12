@@ -33,7 +33,9 @@ public class CodeGenerator {
       return ;
     }
     try {
-      tokens.start();
+      SimpleNode root = tokens.start();
+      PrintVisitor pv = new PrintVisitor();
+      root.jjtAccept(pv, null);
       System.out.println("Java program parsed successfully.");
     } catch (ParseException e) {
       System.out.println("Encountered error during parse.");
@@ -113,14 +115,14 @@ TOKEN: { // Usable
   | <IDENTIFIER: ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9","_"])*>
 }
 
-void start() : {}
+SimpleNode start() : {}
 {
-  ([decl_list()] [function_list()] main()<EOF>)
+  ([decl_list()] [function_list()] main()<EOF>) {return jjtThis;}
 }
 
-void decl_list() : {}
+void decl_list() #void : {}
 {
-  (decl()<SEMICOLON> [decl_list()])
+  (decl()<SEMICOLON> [decl_list() #decl_list(2)])
 }
 
 void decl() : {}
@@ -129,14 +131,14 @@ void decl() : {}
   | const_decl()
 }
 
-void var_decl() : {}
+void var_decl() : {Token t;}
 {
-  (<VAR><IDENTIFIER><TPOINT>type())
+  (<VAR>t = <IDENTIFIER><TPOINT>type()) {jjtThis.value = t.image;}
 }
 
-void const_decl() : {}
+void const_decl() : {Token t;}
 {
-  (<CONST><IDENTIFIER><TPOINT>type()<ASSIGN>expression())
+  (<CONST>t = <IDENTIFIER><TPOINT>type()<ASSIGN>expression()) {jjtThis.value = t.image;}
 }
 
 void function_list() : {}
@@ -145,25 +147,25 @@ void function_list() : {}
   | (function_void() [function_list()])
 }
 
-void function() : {}
+void function() : {Token t;}
 {
-  (type()<IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>)
+  (type()t = <IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image;}
 }
 
-void function_void() : {}
+void function_void() : {Token t;}
 {
-  (<VOID><IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>)
+  (<VOID>t = <IDENTIFIER><LPARENT>[parameter_list()]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image;}
 }
 
-void type() : {}
+void type() : {Token t;}
 {
-  <INTEGER>
-  | <BOOLEAN>
+  t = <INTEGER> {jjtThis.value = t.image;}
+  | t = <BOOLEAN> {jjtThis.value = t.image;}
 }
 
-void parameter_list() : {}
+void parameter_list() : {Token t;}
 {
-  (<IDENTIFIER><TPOINT>type()[<COMA>parameter_list()])
+  (t = <IDENTIFIER><TPOINT>type()[<COMA>parameter_list()]) {jjtThis.value = t.image;}
 }
 
 void main() : {}
@@ -171,19 +173,19 @@ void main() : {}
   (<MAIN><LBRACE>[decl_list()][statement_block()]<RBRACE>)
 }
 
-void statement_block() : {}
+void statement_block() : {Token t;}
 {
-  (<IDENTIFIER>statement_elem()[statement_block()])
-  | (<LBRACE>statement_block()<RBRACE>[statement_block()])
-  | (<IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>[statement_block()])
-  | (<WHILE>condition()<LBRACE>[statement_block()]<RBRACE>[statement_block()])
-  | (<SQIP><SEMICOLON>[statement_block()])
+  (t = <IDENTIFIER>statement_elem()[statement_block()]) {jjtThis.value = t.image;}
+  | (<LBRACE>statement_block()<RBRACE>[statement_block()]){jjtThis.value = "{Statement_block}";}
+  | (t = <IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>[statement_block()]){jjtThis.value = t.image;}
+  | (t = <WHILE>condition()<LBRACE>[statement_block()]<RBRACE>[statement_block()]){jjtThis.value = t.image;}
+  | (t = <SQIP><SEMICOLON>[statement_block()]){jjtThis.value = t.image;}
 }
 
-void statement_elem() : {}
+void statement_elem() #void : {}
 {
-  (<ASSIGN>expression()<SEMICOLON>)
-  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>)
+  (<ASSIGN>expression()<SEMICOLON>) #assign(1)
+  | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>) #funcarg(1)
 }
 
 void expression() : {}
@@ -196,14 +198,14 @@ void expression_one() : {}
   (fragment() [calcul()])
 }
 
-void fragment() : {}
+void fragment() : {Token t;}
 {
-  (<IDENTIFIER>[is_func()])
-  | (<MINUS><IDENTIFIER>)
-  | <NUMBER>
-  | <TRUE>
-  | <FALSE>
-  | (<LPARENT>condition()<RPARENT>)
+  (t = <IDENTIFIER>[is_func()]) {jjtThis.value = t.image;}
+  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image + "\n";}
+  | t = <NUMBER> {jjtThis.value = t.image + "\n";}
+  | t = <TRUE> {jjtThis.value = t.image + "\n";}
+  | t = <FALSE> {jjtThis.value = t.image + "\n";}
+  | (<LPARENT>condition()<RPARENT>) {jjtThis.value = "";}
 }
 
 void is_func() : {}
@@ -216,10 +218,10 @@ void calcul() : {}
   (binary_op() expression_one())
 }
 
-void binary_op() : {}
+void binary_op() : {Token t;}
 {
-  <PLUS>
-  | <MINUS>
+  t = <PLUS> {jjtThis.value = t.image;}
+  | t = <MINUS> {jjtThis.value = t.image;}
 }
 
 void expression_two() : {}
@@ -227,14 +229,14 @@ void expression_two() : {}
   (comp_op() expression())
 }
 
-void comp_op() : {}
+void comp_op() : {Token t;}
 {
-  <EQUAL>
-  | <NEQUAL>
-  | <GEQUAL>
-  | <LEQUAL>
-  | <GREATEST>
-  | <LOWEST>
+  t = <EQUAL> {jjtThis.value = t.image;}
+  | t = <NEQUAL> {jjtThis.value = t.image;}
+  | t = <GEQUAL> {jjtThis.value = t.image;}
+  | t = <LEQUAL> {jjtThis.value = t.image;}
+  | t = <GREATEST> {jjtThis.value = t.image;}
+  | t = <LOWEST> {jjtThis.value = t.image;}
 }
 
 void condition() : {}
@@ -242,10 +244,10 @@ void condition() : {}
   (condition_one() [condition_two()])
 }
 
-void condition_one() : {}
+void condition_one() #void : {}
 {
-  (<TILDE><LPARENT>condition()<RPARENT>)
-  | expression()
+  (<TILDE><LPARENT>condition()<RPARENT>) #tildecond(1)
+  | expression() #condexpr(1)
 }
 
 void condition_two() : {}
@@ -253,18 +255,13 @@ void condition_two() : {}
   (op() condition())
 }
 
-void op() : {}
+void op() : {Token t;}
 {
-  <OR>
-  | <AND>
+  t = <OR> {jjtThis.value = t.image;}
+  | t = <AND> {jjtThis.value = t.image;}
 }
 
-void arg_list() : {}
+void arg_list() : {Token t;}
 {
-  (<IDENTIFIER>[arg_elem()])
-}
-
-void arg_elem() : {}
-{
-  (<COMA>arg_list())
+  (t = <IDENTIFIER>[<COMA>arg_list()]) {jjtThis.value = t.image;}
 }
