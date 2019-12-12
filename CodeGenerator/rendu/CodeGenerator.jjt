@@ -34,9 +34,9 @@ public class CodeGenerator {
     }
     try {
       SimpleNode root = tokens.start();
+      System.out.println("Java program parsed successfully.");
       PrintVisitor pv = new PrintVisitor();
       root.jjtAccept(pv, null);
-      System.out.println("Java program parsed successfully.");
     } catch (ParseException e) {
       System.out.println("Encountered error during parse.");
       e.printStackTrace();
@@ -201,10 +201,10 @@ void expression_one() : {}
 void fragment() : {Token t;}
 {
   (t = <IDENTIFIER>[is_func()]) {jjtThis.value = t.image;}
-  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image + "\n";}
-  | t = <NUMBER> {jjtThis.value = t.image + "\n";}
-  | t = <TRUE> {jjtThis.value = t.image + "\n";}
-  | t = <FALSE> {jjtThis.value = t.image + "\n";}
+  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image;}
+  | t = <NUMBER> {jjtThis.value = t.image;}
+  | t = <TRUE> {jjtThis.value = t.image;}
+  | t = <FALSE> {jjtThis.value = t.image;}
   | (<LPARENT>condition()<RPARENT>) {jjtThis.value = "";}
 }
 

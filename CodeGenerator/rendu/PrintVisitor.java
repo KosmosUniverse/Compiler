@@ -95,15 +95,15 @@ public class PrintVisitor implements CodeGeneratorVisitor {
 
     public Object visit(ASTassign node, Object data) {
         System.out.print("=");
-        for (int i = 0; i < node.jjtGetNumChildren(); i++)
-            node.jjtGetChild(i).jjtAccept(this, data);
+        node.jjtGetChild(0).jjtAccept(this, data);
         return (data);
     }
 
     public Object visit(ASTfuncarg node, Object data) {
         System.out.print("(");
-        for (int i = 0; i < node.jjtGetNumChildren(); i++)
+        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
             node.jjtGetChild(i).jjtAccept(this, data);
+        }
         System.out.println(")");
         return (data);
     }
@@ -131,10 +131,10 @@ public class PrintVisitor implements CodeGeneratorVisitor {
     }
 
     public Object visit(ASTis_func node, Object data) {
-        System.out.print(" ");
-        for (int i = 0; i < node.jjtGetNumChildren(); i++)
+        for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+            System.out.print(" ");
             node.jjtGetChild(i).jjtAccept(this, data);
-        System.out.println("");
+        }
         return (data);
     }
 
@@ -171,16 +171,14 @@ public class PrintVisitor implements CodeGeneratorVisitor {
 
     public Object visit(ASTtildecond node, Object data) {
         System.out.print("~(");
-        for (int i = 0; i < node.jjtGetNumChildren(); i++)
-            node.jjtGetChild(i).jjtAccept(this, data);
+        node.jjtGetChild(0).jjtAccept(this, data);
         System.out.println(")");
         return (data);
     }
 
 
     public Object visit(ASTcondexpr node, Object data) {
-        for (int i = 0; i < node.jjtGetNumChildren(); i++)
-            node.jjtGetChild(i).jjtAccept(this, data);
+        node.jjtGetChild(0).jjtAccept(this, data);
         return (data);
     }
 
@@ -196,7 +194,7 @@ public class PrintVisitor implements CodeGeneratorVisitor {
     }
 
     public Object visit(ASTarg_list node, Object data) {
-        System.out.println("arg: " + node.value);
+        System.out.print("arg: " + node.value + ",");
         for (int i = 0; i < node.jjtGetNumChildren(); i++)
             node.jjtGetChild(i).jjtAccept(this, data);
         return (data);
