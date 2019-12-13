@@ -31,8 +31,12 @@ public class STable extends Object {
     public void checkElem(String name, Boolean isFunc, ArrayList<String> errors) {
         STElement elem = findElem(name);
         if (elem != null) {
-            if (elem.isFunc != isFunc)
-                errors.add("Function: " + name + " does not exists.");
+            if (elem.isFunc != isFunc) {
+                if (isFunc)
+                    errors.add(name + "is a variable not a function.");
+                else
+                    errors.add(name + " is a function.");
+            }
         } else {
             errors.add("Function: " + name + " does not exists.");
         }

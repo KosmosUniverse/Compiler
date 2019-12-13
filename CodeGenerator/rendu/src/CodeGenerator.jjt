@@ -167,9 +167,9 @@ String type() : {Token t;}
   | t = <BOOLEAN> {jjtThis.value = t.image; return t.image;}
 }
 
-void parameter_list() : {Token t;}
+void parameter_list() : {Token t; String type;}
 {
-  (t = <IDENTIFIER><TPOINT>type()[<COMA>parameter_list()]) {jjtThis.value = t.image;}
+  (t = <IDENTIFIER><TPOINT>type = type() {st.addElem(t.image, type, false, false);} [<COMA>parameter_list()]) {jjtThis.value = t.image;}
 }
 
 void main() : {}
@@ -188,7 +188,7 @@ void statement_block() : {Token t;}
 
 void statement_elem(String name) #void : {}
 {
-  (<ASSIGN>expression()<SEMICOLON>) #assign(1)
+  (<ASSIGN>expression()<SEMICOLON>) #assign(1) {st.checkElem(name, false, errors);}
   | (<LPARENT>[arg_list()]<RPARENT><SEMICOLON>) #funcarg(1) {st.checkElem(name, true, errors);}
 }
 
@@ -202,10 +202,10 @@ void expression_one() : {}
   (fragment() [calcul()])
 }
 
-void fragment() : {Token t;}
+void fragment() : {Token t; Boolean isFunc = false;}
 {
-  (t = <IDENTIFIER>[is_func()]) {jjtThis.value = t.image;}
-  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image;}
+  (t = <IDENTIFIER>[is_func(){isFunc = true;}]) {jjtThis.value = t.image; st.checkElem(t.image, isFunc, errors);}
+  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image; st.checkElem(t.image, false, errors);}
   | t = <NUMBER> {jjtThis.value = t.image;}
   | t = <TRUE> {jjtThis.value = t.image;}
   | t = <FALSE> {jjtThis.value = t.image;}
@@ -267,5 +267,5 @@ void op() : {Token t;}
 
 void arg_list() : {Token t;}
 {
-  (t = <IDENTIFIER>[<COMA>arg_list()]) {jjtThis.value = t.image;}
+  (t = <IDENTIFIER>[<COMA>arg_list()]) {jjtThis.value = t.image; st.checkElem(t.image, false, errors);}
 }
