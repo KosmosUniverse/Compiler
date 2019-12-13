@@ -20,6 +20,15 @@ public class STable extends Object {
         stack.add(0, elem);
     }
 
+    public void addFuncParam(String name, Integer count) {
+        for (int i = 0; i < stack.size(); i++) {
+            if (stack.get(i).name.equals(name) && stack.get(i).isFunc) {
+                stack.get(i).argNumber = count;
+                return ;
+            }
+        }
+    }
+
     public STElement findElem(String name) {
         for (int i = 0; i < stack.size(); i++) {
             if (stack.get(i).name.equals(name))
@@ -28,17 +37,30 @@ public class STable extends Object {
         return (null);
     }
 
-    public void checkElem(String name, Boolean isFunc, ArrayList<String> errors) {
+    public void checkElemDef(String name, ArrayList<String> errors) {
+        STElement elem = findElem(name);
+        if (elem != null) {
+            errors.add("Multiple definition of " + name);
+        }
+    }
+
+    public void checkElemUse(String name, Boolean isFunc, Integer argNumber, ArrayList<String> errors) {
         STElement elem = findElem(name);
         if (elem != null) {
             if (elem.isFunc != isFunc) {
                 if (isFunc)
-                    errors.add(name + "is a variable not a function.");
+                    errors.add(name + " is a variable not a function.");
                 else
                     errors.add(name + " is a function.");
+            } else {
+                elem.isUsed = true;
+                if (isFunc) {
+                    if (elem.argNumber != argNumber)
+                        errors.add(name + " does not have the good number of arguments. It have " + argNumber + " arguments instead of " + elem.argNumber);                        
+                }
             }
         } else {
-            errors.add("Function: " + name + " does not exists.");
+            errors.add(name + " does not exists.");
         }
     }
 
