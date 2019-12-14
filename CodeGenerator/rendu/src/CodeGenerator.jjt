@@ -12,6 +12,7 @@ import java.util.ArrayList;
 public class CodeGenerator {
   public static STable st = new STable();
   public static ArrayList<String> errors = new ArrayList<String>();
+  public static ArrayList<String> warnings = new ArrayList<String>();
 
   public static void main(String args[]) throws ParseException {
     CodeGenerator tokens;
@@ -35,28 +36,28 @@ public class CodeGenerator {
     try {
       SimpleNode root = tokens.start();
 
+      st.checkAllUsed(warnings);
+      if (!warnings.isEmpty())
+        System.out.println("WARNING:" + makeString(warnings));
+
       if (!errors.isEmpty()) {
-        throw new ParseException(makeString());
+        throw new ParseException(makeString(errors));
       }
 
       System.out.println("Java program parsed successfully.");
 
       PrintVisitor pv = new PrintVisitor();
       root.jjtAccept(pv, null);
-
-      System.out.println("STACK:");
-      st.printStack();
-
     } catch (ParseException e) {
-      System.out.println("Encountered error during parse: " + e.getMessage());
+      System.out.println("Encountered error during parse:" + e.getMessage());
     }
   }
 
-  public static String makeString() {
+  public static String makeString(ArrayList<String> list) {
     String str = "\n";
 
-    for (int i = 0; i < errors.size(); i++) {
-      str += "\t- " + errors.get(i) + "\n";
+    for (int i = 0; i < list.size(); i++) {
+      str += "\t- " + list.get(i) + "\n";
     }
 
     return (str);
@@ -203,7 +204,7 @@ void statement_block() : {Token t;}
 
 void statement_elem(String name) #void : {Integer count = 0;}
 {
-  (<ASSIGN>expression()<SEMICOLON>) #assign(1) {st.checkElemUse(name, false, 0, errors);}
+  (<ASSIGN>expression()<SEMICOLON>) #assign(1) {st.checkElemRedef(name, errors); st.checkElemUse(name, false, 0, errors);}
   | (<LPARENT>[count = arg_list(count)]<RPARENT><SEMICOLON>) #funcarg(1) {st.checkElemUse(name, true, count, errors);}
 }
 

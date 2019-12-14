@@ -12,6 +12,8 @@ public class STable extends Object {
 
     public void addElem(String _name, String _type, Boolean _isConst, Boolean _isFunc){
         STElement elem = new STElement(_name, _type, _isConst, _isFunc);
+        if (_name.equals("main"))
+            elem.isUsed = true;
         stack.add(0, elem);
     }
 
@@ -38,10 +40,20 @@ public class STable extends Object {
     }
 
     public void checkElemDef(String name, ArrayList<String> errors) {
-        STElement elem = findElem(name);
-        if (elem != null) {
-            errors.add("Multiple definition of " + name);
+        for (int i = 0; i < stack.size(); i++) {
+            if (stack.get(i).name.equals("Break") && stack.get(i).type.equals("Break"))
+                return ;
+            else if (stack.get(i).name.equals(name)) {
+                errors.add("Multiple definition of " + name);
+                return ;
+            }
         }
+    }
+
+    public void checkElemRedef(String name, ArrayList<String> errors) {
+        STElement elem = findElem(name);
+        if (elem != null && elem.isConst)
+            errors.add(name + " is const and cannot be redefined.");
     }
 
     public void checkElemUse(String name, Boolean isFunc, Integer argNumber, ArrayList<String> errors) {
@@ -51,7 +63,7 @@ public class STable extends Object {
                 if (isFunc)
                     errors.add(name + " is a variable not a function.");
                 else
-                    errors.add(name + " is a function.");
+                    errors.add(name + " is a function not a variable.");
             } else {
                 elem.isUsed = true;
                 if (isFunc) {
@@ -61,6 +73,15 @@ public class STable extends Object {
             }
         } else {
             errors.add(name + " does not exists.");
+        }
+    }
+
+    public void checkAllUsed(ArrayList<String> warnings) {
+        int count = 0;
+        for (int i = 0; i < stack.size(); i++) {
+            if (!stack.get(i).isUsed) {
+                warnings.add(stack.get(i).name + " was defined but never used.");
+            }
         }
     }
 
