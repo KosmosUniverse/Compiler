@@ -1,3 +1,4 @@
+rm -rf build
 mkdir -p build
 cp src/* build
 cd build

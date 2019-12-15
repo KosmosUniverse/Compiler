@@ -45,9 +45,10 @@ public class CodeGenerator {
       }
 
       System.out.println("Java program parsed successfully.");
-
+/*
       PrintVisitor pv = new PrintVisitor();
       root.jjtAccept(pv, null);
+      */
     } catch (ParseException e) {
       System.out.println("Encountered error during parse:" + e.getMessage());
     }
@@ -137,18 +138,13 @@ TOKEN: { // Usable
 
 SimpleNode start() : {}
 {
-  ([decl_list()] [function_list()] main()<EOF>) {return jjtThis;}
+  (decl_list() function_list() main()<EOF>) {return jjtThis;}
 }
 
 void decl_list() #void : {}
 {
-  (decl()<SEMICOLON> [decl_list() #decl_list(2)])
-}
-
-void decl() : {}
-{
-  var_decl()
-  | const_decl()
+  ((var_decl() | const_decl())<SEMICOLON>decl_list()) #decl_list(2)
+  | { } #decl_empty(0)
 }
 
 void var_decl() : {Token t; String type;}
@@ -158,95 +154,99 @@ void var_decl() : {Token t; String type;}
 
 void const_decl() : {Token t; String type;}
 {
-  (<CONST>t = <IDENTIFIER><TPOINT>type = type()<ASSIGN>expression()) {jjtThis.value = t.image; st.checkElemDef(t.image, errors); st.addElem(t.image, type, true, false);}
+  (<CONST>t = <IDENTIFIER><TPOINT>type = type()<ASSIGN>expression_one()) {jjtThis.value = t.image; st.checkElemDef(t.image, errors); st.addElem(t.image, type, true, false);}
 }
 
-void function_list() : {}
+void function_list() #void : {}
 {
-  (function() [function_list()])
-  | (function_void() [function_list()])
+  ((function() | function_void()) function_list()) #function_list(2)
+  | { } #function_empty(0)
 }
 
-void function() : {Token t; String type; Integer count = 0;}
+void function() : {Token t; String type; int count = 0;}
 {
-  (type = type()t = <IDENTIFIER> {st.checkElemDef(t.image, errors); st.addElem(t.image, type, false, true); st.addBreak();} <LPARENT>[count = parameter_list(count)]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT>expression()<RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image; st.addFuncParam(t.image, count); st.removeUntilBreak();}
+  (type = type()t = <IDENTIFIER> {st.checkElemDef(t.image, errors); st.addElem(t.image, type, false, true); st.addBreak();} <LPARENT>parameter_list(count)<RPARENT><LBRACE>decl_list()statement_block()<RETURN><LPARENT>expression_one()<RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image; st.addFuncParam(t.image, count); st.removeUntilBreak();}
 }
 
-void function_void() : {Token t; Integer count = 0;}
+void function_void() : {Token t; int count = 0;}
 {
-  (<VOID>t = <IDENTIFIER> {st.checkElemDef(t.image, errors); st.addElem(t.image, "void", false, true); st.addBreak();} <LPARENT>[count = parameter_list(count)]<RPARENT><LBRACE>[decl_list()][statement_block()]<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image; st.addFuncParam(t.image, count); st.removeUntilBreak();}
+  (<VOID>t = <IDENTIFIER> {st.checkElemDef(t.image, errors); st.addElem(t.image, "void", false, true); st.addBreak();} <LPARENT>parameter_list(count)<RPARENT><LBRACE>decl_list()statement_block()<RETURN><LPARENT><RPARENT><SEMICOLON><RBRACE>) {jjtThis.value = t.image; st.addFuncParam(t.image, count); st.removeUntilBreak();}
 }
 
 String type() : {Token t;}
 {
-  t = <INTEGER> {jjtThis.value = t.image; return t.image;}
-  | t = <BOOLEAN> {jjtThis.value = t.image; return t.image;}
+  t = <INTEGER> {return t.image;}
+  | t = <BOOLEAN> {return t.image;}
 }
 
-Integer parameter_list(Integer count) : {Token t; String type;}
+void parameter_list(int count) #void : {Token t; String type;}
 {
-  (t = <IDENTIFIER><TPOINT>type = type() {count += 1; st.addElem(t.image, type, false, false);} [<COMA>count = parameter_list(count)]) {jjtThis.value = t.image; return count;}
+  (t = <IDENTIFIER><TPOINT>type = type() {st.addElem(t.image, type, false, false);} parameter_elem(count)) {jjtThis.value = t.image; count++;} #parameter_list(2)
+  | { } #parameter_empty(0)
+}
+
+void parameter_elem(int count) #void : {Token t; String type;}
+{
+  (<COMA>t = <IDENTIFIER><TPOINT>type = type() parameter_elem(count)) {st.addElem(t.image, type, false, false);} #parameter_elem(2)
+  | { } #parameter_elem_empty(0)
 }
 
 void main() : {}
 {
-  (<MAIN> {st.checkElemDef("main", errors); st.addElem("main", "void", false, true); st.addBreak();} <LBRACE>[decl_list()][statement_block()]<RBRACE>) {st.removeUntilBreak();}
+  (<MAIN> {st.checkElemDef("main", errors); st.addElem("main", "void", false, true); st.addBreak();} <LBRACE>decl_list()statement_block()<RBRACE>) {st.removeUntilBreak();}
 }
 
-void statement_block() : {Token t;}
+void statement_block() #void: {}
 {
-  (t = <IDENTIFIER>statement_elem(t.image)[statement_block()]) {jjtThis.value = t.image;}
-  | (<LBRACE>statement_block()<RBRACE>[statement_block()]){jjtThis.value = "{Statement_block}";}
-  | (t = <IF>condition()<LBRACE>[statement_block()]<RBRACE><ELSE><LBRACE>[statement_block()]<RBRACE>[statement_block()]){jjtThis.value = t.image;}
-  | (t = <WHILE>condition()<LBRACE>[statement_block()]<RBRACE>[statement_block()]){jjtThis.value = t.image;}
-  | (t = <SQIP><SEMICOLON>[statement_block()]){jjtThis.value = t.image;}
+  (statement_elem() statement_block()) #statement_block(2)
+  | { } #statement_empty(0)
 }
 
-void statement_elem(String name) #void : {Integer count = 0;}
+void statement_elem() #void : {Token t;}
 {
-  (<ASSIGN>expression()<SEMICOLON>) #assign(1) {st.checkElemRedef(name, errors); st.checkElemUse(name, false, 0, errors);}
-  | (<LPARENT>[count = arg_list(count)]<RPARENT><SEMICOLON>) #funcarg(1) {st.checkElemUse(name, true, count, errors);}
+  (t = <IDENTIFIER>identifier_elem(t.image)) {jjtThis.value = t.image;} #stmt_id(1)
+  | (<LBRACE>statement_block()<RBRACE>) #stmt_stmt(0)
+  | (<IF>condition()<LBRACE>statement_block()<RBRACE><ELSE><LBRACE>statement_block()<RBRACE>) #stmt_if(3)
+  | (<WHILE>condition()<LBRACE>statement_block()<RBRACE>) #stmt_while(2)
+  | (<SQIP><SEMICOLON>) #void
+}
+
+void identifier_elem(String name) #void : {int count = 0;}
+{
+  (<ASSIGN>expression_one()<SEMICOLON>) #assign(1) {st.checkElemRedef(name, errors); st.checkElemUse(name, false, 0, errors);}
+  | (<LPARENT>arg_list(count)<RPARENT><SEMICOLON>) #funcarg(1) {st.checkElemUse(name, true, count, errors);}
 }
 
 void expression() : {}
 {
-  (expression_one() [expression_two()])
+  (expression_one() [comp_op() expression()])
 }
 
 void expression_one() : {}
 {
-  (fragment() [calcul()])
+  (fragment() [binary_op() expression_one()])
 }
 
-void fragment() : {Token t; Boolean isFunc = false; Integer count = 0;}
+void fragment() #void : {Token t; Boolean isFunc; int count = 0;}
 {
-  (t = <IDENTIFIER>[count = is_func(count){isFunc = true;}]) {jjtThis.value = t.image; st.checkElemUse(t.image, isFunc, count, errors);}
-  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image; st.checkElemUse(t.image, false, 0, errors);}
-  | t = <NUMBER> {jjtThis.value = t.image;}
-  | t = <TRUE> {jjtThis.value = t.image;}
-  | t = <FALSE> {jjtThis.value = t.image;}
-  | (<LPARENT>condition()<RPARENT>) {jjtThis.value = "";}
+  (t = <IDENTIFIER>isFunc = is_func(count)) {jjtThis.value = t.image; st.checkElemUse(t.image, isFunc, count, errors);} #frag_id(1)
+  | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image; st.checkElemUse(t.image, false, 0, errors);} #frag_minus(0)
+  | t = <NUMBER> {jjtThis.value = t.image;} #frag_num(0)
+  | t = <TRUE> {jjtThis.value = t.image;} #frag_bool(0)
+  | t = <FALSE> {jjtThis.value = t.image;} #frag_bool(0)
+  | (<LPARENT>condition()<RPARENT>) #frag_cond(1)
 }
 
-Integer is_func(Integer count) : {}
+Boolean is_func(int count) : {}
 {
-  (<LPARENT>[count = arg_list(count)]<RPARENT>) {return count;}
-}
-
-void calcul() : {}
-{
-  (binary_op() expression_one())
+  (<LPARENT>arg_list(count)<RPARENT>){return true;}
+  | { } {return false;}
 }
 
 void binary_op() : {Token t;}
 {
   t = <PLUS> {jjtThis.value = t.image;}
   | t = <MINUS> {jjtThis.value = t.image;}
-}
-
-void expression_two() : {}
-{
-  (comp_op() expression())
 }
 
 void comp_op() : {Token t;}
@@ -261,7 +261,7 @@ void comp_op() : {Token t;}
 
 void condition() : {}
 {
-  (condition_one() [condition_two()])
+  (condition_one() [op() condition()])
 }
 
 void condition_one() #void : {}
@@ -270,18 +270,20 @@ void condition_one() #void : {}
   | expression() #condexpr(1)
 }
 
-void condition_two() : {}
-{
-  (op() condition())
-}
-
 void op() : {Token t;}
 {
   t = <OR> {jjtThis.value = t.image;}
   | t = <AND> {jjtThis.value = t.image;}
 }
 
-Integer arg_list(Integer count) : {Token t;}
+void arg_list(int count) #void : {Token t;}
 {
-  (t = <IDENTIFIER>{count += 1;}[<COMA>count = arg_list(count)]) {jjtThis.value = t.image; st.checkElemUse(t.image, false, 0, errors); return count;}
+  (t = <IDENTIFIER>arg_elem(count)) {jjtThis.value = t.image; st.checkElemUse(t.image, false, 0, errors); count++;} #arg_list(1)
+  | { } #arg_empty(0)
+}
+
+void arg_elem(int count) #void : {Token t;}
+{
+  (<COMA>t = <IDENTIFIER> arg_elem(count)) {st.checkElemUse(t.image, false, 0, errors); count++;} #arg_elem(1)
+  | { } #arg_elem_empty(0)
 }
