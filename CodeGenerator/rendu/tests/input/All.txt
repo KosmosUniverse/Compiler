@@ -1,0 +1,35 @@
+var a:integer;
+const y:boolean = true;
+
+boolean check(x:integer, y:integer) {
+    var ret:boolean;
+
+    if (x == y) {
+        ret = true;
+    } else {
+        ret = false;
+    }
+    return (ret);
+}
+
+main {
+    var i:integer;
+    i = 1;
+    a = 2;
+
+    if (check(i, a) == true) {
+        i = 4;
+    } else {
+        i = 3;
+    }
+
+    if (i == 2) {
+        i = 1;
+    } else {
+
+    }
+
+    while (i < 10) {
+        i = i + 2;
+    }
+}

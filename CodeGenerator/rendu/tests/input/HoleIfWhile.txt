@@ -1,0 +1,20 @@
+main {
+    var i:integer;
+    i = 1;
+    
+    if (i == 2) {
+
+    } else {
+        i = 3;
+    }
+
+    if (i == 2) {
+        i = 1;
+    } else {
+
+    }
+
+    while (i < 10) {
+
+    }
+}

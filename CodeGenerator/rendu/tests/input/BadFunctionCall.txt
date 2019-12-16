@@ -1,0 +1,11 @@
+integer test(x:integer) {
+    
+    return(x);
+}
+
+main {
+    var x:boolean;
+
+    test = 1;
+    x();
+}

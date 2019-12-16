@@ -1,0 +1,9 @@
+var i:integer;
+var j:boolean;
+const a:integer = 1;
+const b:integer = 1 + 2;
+const c:boolean = true;
+
+main {
+
+}

@@ -1,0 +1,5 @@
+const i:integer = 1;
+
+main {
+    i = 2;
+}

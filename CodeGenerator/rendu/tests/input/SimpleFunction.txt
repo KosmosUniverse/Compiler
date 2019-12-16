@@ -1,0 +1,8 @@
+integer test(x:integer) {
+    
+    return(x);
+}
+
+main {
+
+}

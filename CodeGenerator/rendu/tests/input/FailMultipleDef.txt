@@ -1,0 +1,21 @@
+var i:integer;
+var i:boolean;
+const a:integer = 1;
+const b:integer = 1 + 2;
+const a:boolean = true;
+
+integer test(x:integer) {
+    
+    return(x);
+}
+
+integer test(y:integer) {
+    var y:boolean;
+
+    return(y);
+}
+
+main {
+    const f:integer = 1;
+    var f:integer;
+}
