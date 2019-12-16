@@ -1,0 +1,12 @@
+integer test(x:integer) {
+    
+    return(x);
+}
+
+main {
+    const a:integer = 1;
+    const b:boolean = true;
+    
+    test();
+    test(a, b);
+}
