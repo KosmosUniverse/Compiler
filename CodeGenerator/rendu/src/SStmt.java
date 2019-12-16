@@ -1,4 +1,4 @@
 public class SStmt {
-    public String next;
-    public String code;
+    public String next = "";
+    public String code = "";
 }

@@ -45,12 +45,19 @@ public class CodeGenerator {
       }
 
       System.out.println("Java program parsed successfully.");
-/*
+
       PrintVisitor pv = new PrintVisitor();
-      root.jjtAccept(pv, null);
-      */
+      SStmt program = new SStmt();
+      root.jjtAccept(pv, program);
+      
+      for (String str : program.code.split("\n")) {
+        if (!str.contains(":"))
+          System.out.print("      ");
+        System.out.println(str);
+      }
+      
     } catch (ParseException e) {
-      System.out.println("Encountered error during parse:" + e.getMessage());
+      System.out.println("Encountered error during parse:\n" + e.getMessage());
     }
   }
 
@@ -181,7 +188,7 @@ String type() : {Token t;}
 
 void parameter_list(int count) #void : {Token t; String type;}
 {
-  (t = <IDENTIFIER><TPOINT>type = type() {st.addElem(t.image, type, false, false);} parameter_elem(count)) {jjtThis.value = t.image; count++;} #parameter_list(2)
+  (t = <IDENTIFIER><TPOINT>type = type() parameter_elem(count)) {st.addElem(t.image, type, false, false); jjtThis.value = t.image; count++;} #parameter_list(2)
   | { } #parameter_empty(0)
 }
 
@@ -213,8 +220,8 @@ void statement_elem() #void : {Token t;}
 
 void identifier_elem(String name) #void : {int count = 0;}
 {
-  (<ASSIGN>expression_one()<SEMICOLON>) #assign(1) {st.checkElemRedef(name, errors); st.checkElemUse(name, false, 0, errors);}
-  | (<LPARENT>arg_list(count)<RPARENT><SEMICOLON>) #funcarg(1) {st.checkElemUse(name, true, count, errors);}
+  (<ASSIGN>expression_one()<SEMICOLON> {jjtThis.value = name;}) #assign(1) {st.checkElemRedef(name, errors); st.checkElemUse(name, false, 0, errors);}
+  | (<LPARENT>arg_list(count)<RPARENT><SEMICOLON> {jjtThis.value = name;}) #funcarg(1) {st.checkElemUse(name, true, count, errors);}
 }
 
 void expression() : {}
@@ -229,7 +236,7 @@ void expression_one() : {}
 
 void fragment() #void : {Token t; Boolean isFunc; int count = 0;}
 {
-  (t = <IDENTIFIER>isFunc = is_func(count)) {jjtThis.value = t.image; st.checkElemUse(t.image, isFunc, count, errors);} #frag_id(1)
+  (t = <IDENTIFIER>isFunc = is_func(t.image, count)) {st.checkElemUse(t.image, isFunc, count, errors);} #frag_id(1)
   | (<MINUS>t = <IDENTIFIER>) {jjtThis.value = "-" + t.image; st.checkElemUse(t.image, false, 0, errors);} #frag_minus(0)
   | t = <NUMBER> {jjtThis.value = t.image;} #frag_num(0)
   | t = <TRUE> {jjtThis.value = t.image;} #frag_bool(0)
@@ -237,10 +244,10 @@ void fragment() #void : {Token t; Boolean isFunc; int count = 0;}
   | (<LPARENT>condition()<RPARENT>) #frag_cond(1)
 }
 
-Boolean is_func(int count) : {}
+Boolean is_func(String name, int count) #void : {}
 {
-  (<LPARENT>arg_list(count)<RPARENT>){return true;}
-  | { } {return false;}
+  (<LPARENT>arg_list(count)<RPARENT>){jjtThis.value = name; return true;} #is_func(1)
+  | { } {jjtThis.value = name; return false;} #is_id(0)
 }
 
 void binary_op() : {Token t;}
@@ -284,6 +291,6 @@ void arg_list(int count) #void : {Token t;}
 
 void arg_elem(int count) #void : {Token t;}
 {
-  (<COMA>t = <IDENTIFIER> arg_elem(count)) {st.checkElemUse(t.image, false, 0, errors); count++;} #arg_elem(1)
+  (<COMA>t = <IDENTIFIER> arg_elem(count)) {jjtThis.value = t.image; st.checkElemUse(t.image, false, 0, errors); count++;} #arg_elem(1)
   | { } #arg_elem_empty(0)
 }
